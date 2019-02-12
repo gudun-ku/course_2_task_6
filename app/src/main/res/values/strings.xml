@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="example_link" translatable="false">https://c1.staticflickr.com/4/3736/32762943674_2456ce495c_b.jpg</string>
+
     <string name="app_name">File loader test</string>
-    <string name="msg_file_read_rationale">Для чтения изображения из локального файла\n
-        нужно разрешить чтение из внешнего хранилища.</string>
-    <string name="msg_file_write_rationale">Для загрузки изображения и сохранения в локальный файл\n
-        нужно разрешить запись во внешнее хранилище.\n</string>
-    <string name="msg_deny">Вы можете сделать это в настройках приложения</string>
-    <string name="lbl_accepted">Понятно</string>
+    <string name="msg_file_read_rationale">For reading image file from external storage
+        you need to give such permission to application</string>
+    <string name="msg_file_write_rationale">For downloading a file to storage you
+        need to give a such permission to application</string>
+    <string name="msg_deny">You can change it in application settings</string>
+    <string name="lbl_accepted">Accepted</string>
+    <string name="msg_download_complete">Download complete:</string>
+    <string name="msg_nothing_to_show">Nothing to show!</string>
+    <string name="err_url_not_a_picture">Not a picture url!</string>
+    <string name="err_url_not_valid">URL is not valid !</string>
+    <string name="msg_dman_title">Downloading image...</string>
+    <string name="msg_show_title">Demonstrate...</string>
+    <string name="lbl_load_image">Load image</string>
+    <string name="lbl_show_image">Show Image</string>
 </resources>

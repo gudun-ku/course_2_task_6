@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Environment;
@@ -61,6 +62,8 @@ public class MainActivity extends AppCompatActivity {
 
         appName = getApplicationInfo().loadLabel(getPackageManager()).toString();
         mDownloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        registerReceiver(onDownloadComplete,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         ivLoadedImage = findViewById(R.id.iv_loadedimage);
         etFileLink = findViewById(R.id.et_filelink);
@@ -70,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
         btnLoad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showToast("Download");
                 downloadImageFile(etFileLink.getText().toString());
             }
         });
@@ -78,54 +80,77 @@ public class MainActivity extends AppCompatActivity {
         btnShow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showToast("Show!");
-                readImageFile("");
+                showToast(getString(R.string.msg_show_title));
+                readImageFile();
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        etFileLink.setText(getString(R.string.example_link));
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(onDownloadComplete);
     }
 
     // Запросим разрешения, достала их установка вручную
     private final int WRITE_EXTERNAL_STORAGE_RC = 1001;
     private final int READ_EXTERNAL_STORAGE_RC = 1002;
 
-    public void requestPermissionForFileRead() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                new AlertDialog.Builder(this)
-                        .setMessage(getString(R.string.msg_file_read_rationale))
-                        .setPositiveButton("Понятно", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                ActivityCompat.requestPermissions(MainActivity.this,
-                                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                                        READ_EXTERNAL_STORAGE_RC);
-                            }
-                        }).show();
-            } else
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        READ_EXTERNAL_STORAGE_RC);
+
+    private boolean isPermissionFileReadGranted() {
+        return ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isPermissionFileWriteGranted() {
+        return ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public void requestPermissionForFileRead(final AppCompatActivity activity) {
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            AlertDialog dialog = new AlertDialog.Builder(activity)
+                    .setMessage(getString(R.string.msg_file_read_rationale))
+                    .setPositiveButton("Понятно", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            ActivityCompat.requestPermissions(activity,
+                                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                                    READ_EXTERNAL_STORAGE_RC);
+                        }
+                    }).create();
+            dialog.show();
+        } else {
+            ActivityCompat.requestPermissions(activity,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    READ_EXTERNAL_STORAGE_RC);
         }
     }
 
-    public void requestPermissionForFileWrite() {
+    public void requestPermissionForFileWrite(final AppCompatActivity activity) {
 
-        if ( ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED ) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                new AlertDialog.Builder(this)
-                        .setMessage(getString(R.string.msg_file_write_rationale))
-                        .setPositiveButton("Понятно", new DialogInterface.OnClickListener() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(activity,Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                AlertDialog dialog = new AlertDialog.Builder(activity)
+                    .setMessage(getString(R.string.msg_file_write_rationale))
+                    .setPositiveButton("Понятно", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                ActivityCompat.requestPermissions(MainActivity.this,
+                                ActivityCompat.requestPermissions(activity,
                                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                                         WRITE_EXTERNAL_STORAGE_RC);
                             }
-                        }).show();
-            } else
-                ActivityCompat.requestPermissions(this,
+                    })
+                    .create();
+                dialog.show();
+        } else {
+            ActivityCompat.requestPermissions(activity,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     WRITE_EXTERNAL_STORAGE_RC);
         }
@@ -137,8 +162,7 @@ public class MainActivity extends AppCompatActivity {
         if (grantResults.length != 1) return;
         if (requestCode == READ_EXTERNAL_STORAGE_RC ) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                //requestPermissionForFileRead();
-                readImageFile("");
+                readImageFile();
             } else
                 new AlertDialog.Builder(this)
                     .setMessage(getString(R.string.msg_file_read_rationale) +
@@ -148,7 +172,6 @@ public class MainActivity extends AppCompatActivity {
 
         }else if (requestCode == WRITE_EXTERNAL_STORAGE_RC ) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                //requestPermissionForFileWrite();
                 downloadImageFile(etFileLink.getText().toString());
             } else
                 new AlertDialog.Builder(this)
@@ -181,10 +204,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void downloadImageFile(String url) {
-        requestPermissionForFileWrite();
+
+        if (!isPermissionFileWriteGranted()) {
+            requestPermissionForFileWrite(this);
+            return;
+        }
 
         if (!isUrlValid(url)) {
-            showToast("URL is not valid !");
+            showToast(getString(R.string.err_url_not_valid));
             return;
         }
         String pictureExtension = getFileExtensionFromUrl(url);
@@ -192,52 +219,37 @@ public class MainActivity extends AppCompatActivity {
             !pictureExtension.equalsIgnoreCase(".jpg") &&
             !pictureExtension.equalsIgnoreCase(".png") &&
             !pictureExtension.equalsIgnoreCase(".bmp")) {
-            showToast("Not a picture url!");
+            showToast(getString(R.string.err_url_not_a_picture));
         }
         String pictureName = getFilenameFromUrl(url);
 
         Uri pictureUri = Uri.parse(url);
         DownloadManager.Request request = new DownloadManager.Request(pictureUri);
+
         request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
         request.setAllowedOverRoaming(false);
-        request.setTitle("Downloading image..." + "");
-        request.setDescription("Downloading image..." + "");
+        request.setTitle(getString(R.string.msg_dman_title));
+        request.setDescription(getString(R.string.msg_dman_title));
         request.setVisibleInDownloadsUi(true);
 
         mDownloadFileName = appName + "/" + pictureName + pictureExtension;
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/"  + mDownloadFileName);
 
         long refid = mDownloadManager.enqueue(request);
+
         mDownloadsList.add(refid);
     }
 
-    BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
-
-        public void onReceive(Context context, Intent intent) {
-
-            // get the refid from the download manager
-            long referenceId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            // remove it from our list
-            mDownloadsList.remove(referenceId);
-            // if list is empty means all downloads completed
-            if (mDownloadsList.isEmpty())
-            {
-                // show a notification
-                Log.e("INSIDE", "" + referenceId);
-                NotificationCompat.Builder mBuilder =
-                        new NotificationCompat.Builder(MainActivity.this)
-                                .setSmallIcon(R.mipmap.ic_launcher)
-                                .setContentTitle("Download manager")
-                                .setContentText("All Download completed");
-
-                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                notificationManager.notify(455, mBuilder.build());
-            }
+    private void readImageFile() {
+        if (!isPermissionFileReadGranted()) {
+            requestPermissionForFileRead(this);
+            return;
         }
-    };
 
-    private void readImageFile(String fileUrl) {
-        requestPermissionForFileRead();
+        if (mDownloadFileName == null) {
+            showToast(getString(R.string.msg_nothing_to_show));
+            return;
+        }
 
         Picasso.with(this)
                 .load(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -245,6 +257,20 @@ public class MainActivity extends AppCompatActivity {
                 .into(ivLoadedImage);
 
     }
+
+
+    BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+
+        public void onReceive(Context context, Intent intent) {
+            // get the refid from the download manager
+            long referenceId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            mDownloadsList.remove(referenceId);
+            if (mDownloadsList.isEmpty())            {
+                showToast(getString(R.string.msg_download_complete) + mDownloadFileName);
+            }
+        }
+    };
+
 
 
 }

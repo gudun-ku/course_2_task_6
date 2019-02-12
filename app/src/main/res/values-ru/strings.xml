@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">File loader test</string>
-    <string name="msg_file_read_rationale">Для чтения изображения из локального файла\n
+    <string name="msg_file_read_rationale">Для чтения изображения из локального файла
         нужно разрешить чтение из внешнего хранилища.</string>
-    <string name="msg_file_write_rationale">Для загрузки изображения и сохранения в локальный файл\n
-        нужно разрешить запись во внешнее хранилище.\n</string>
-    <string name="msg_deny">Вы можете сделать это настройку приложения</string>
+    <string name="msg_file_write_rationale">Для загрузки изображения и сохранения в локальный файл
+        нужно разрешить запись во внешнее хранилище.</string>
+    <string name="msg_deny">Вы можете сделать это в настройках приложения</string>
     <string name="lbl_accepted">Понятно</string>
+    <string name="msg_download_complete">Загрузка завершена:</string>
+    <string name="msg_nothing_to_show">Нечего отображать!</string>
+    <string name="err_url_not_a_picture">Это не картинка!</string>
+    <string name="err_url_not_valid">Ошибка в URL!</string>
+    <string name="msg_dman_title">Загружаю...</string>
+    <string name="msg_show_title">Показываю...</string>
+    <string name="lbl_load_image">Загрузить картинку</string>
+    <string name="lbl_show_image">Показать картинку</string>
 </resources>
