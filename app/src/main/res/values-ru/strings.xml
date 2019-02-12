@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">File loader test</string>
+    <string name="msg_file_read_rationale">Для чтения изображения из локального файла\n
+        нужно разрешить чтение из внешнего хранилища.</string>
+    <string name="msg_file_write_rationale">Для загрузки изображения и сохранения в локальный файл\n
+        нужно разрешить запись во внешнее хранилище.\n</string>
+    <string name="msg_deny">Вы можете сделать это настройку приложения</string>
+    <string name="lbl_accepted">Понятно</string>
+</resources>
