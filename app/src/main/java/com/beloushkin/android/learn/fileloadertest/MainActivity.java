@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         btnLoad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                btnShow.setEnabled(false);
                 downloadImageFile(etFileLink.getText().toString());
             }
         });
@@ -84,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 readImageFile();
             }
         });
+        btnShow.setEnabled(false);
     }
 
     @Override
@@ -260,17 +262,15 @@ public class MainActivity extends AppCompatActivity {
 
 
     BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
-
         public void onReceive(Context context, Intent intent) {
             // get the refid from the download manager
             long referenceId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
             mDownloadsList.remove(referenceId);
-            if (mDownloadsList.isEmpty())            {
+            if (mDownloadsList.isEmpty()) {
+                btnShow.setEnabled(true);
                 showToast(getString(R.string.msg_download_complete) + mDownloadFileName);
             }
         }
     };
-
-
 
 }
