@@ -1,26 +1,44 @@
 package com.beloushkin.android.learn.fileloadertest;
 
 import android.Manifest;
+import android.app.DownloadManager;
+import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.squareup.picasso.Picasso;
+
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
+
+    private String appName;
     private ImageView ivLoadedImage;
     private EditText etFileLink;
     private Button btnLoad, btnShow;
-    private String filename;
+    private String mDownloadFileName;
 
 
     private Toast mToast;
@@ -33,10 +51,16 @@ public class MainActivity extends AppCompatActivity {
         mToast.show();
     }
 
+    private DownloadManager mDownloadManager;
+    List<Long> mDownloadsList = new ArrayList<>();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        appName = getApplicationInfo().loadLabel(getPackageManager()).toString();
+        mDownloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
 
         ivLoadedImage = findViewById(R.id.iv_loadedimage);
         etFileLink = findViewById(R.id.et_filelink);
@@ -135,13 +159,91 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-
-    private void downloadImageFile(String fileUrl) {
-        requestPermissionForFileWrite();
+    private String getFilenameFromUrl(String url) {
+        String lastParcel =  url.substring(url.lastIndexOf("/"));
+        return lastParcel.substring(0,lastParcel.length() - lastParcel.lastIndexOf("."));
     }
+
+    private String getFileExtensionFromUrl(String url) {
+        return url.substring(url.lastIndexOf("."));
+    }
+
+    private boolean isUrlValid(String url)
+    {
+        /* Try creating a valid URL */
+        try {
+            new URL(url).toURI();
+            return true;
+        }
+        catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void downloadImageFile(String url) {
+        requestPermissionForFileWrite();
+
+        if (!isUrlValid(url)) {
+            showToast("URL is not valid !");
+            return;
+        }
+        String pictureExtension = getFileExtensionFromUrl(url);
+        if (!pictureExtension.equalsIgnoreCase(".jpeg") &&
+            !pictureExtension.equalsIgnoreCase(".jpg") &&
+            !pictureExtension.equalsIgnoreCase(".png") &&
+            !pictureExtension.equalsIgnoreCase(".bmp")) {
+            showToast("Not a picture url!");
+        }
+        String pictureName = getFilenameFromUrl(url);
+
+        Uri pictureUri = Uri.parse(url);
+        DownloadManager.Request request = new DownloadManager.Request(pictureUri);
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+        request.setAllowedOverRoaming(false);
+        request.setTitle("Downloading image..." + "");
+        request.setDescription("Downloading image..." + "");
+        request.setVisibleInDownloadsUi(true);
+
+        mDownloadFileName = appName + "/" + pictureName + pictureExtension;
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/"  + mDownloadFileName);
+
+        long refid = mDownloadManager.enqueue(request);
+        mDownloadsList.add(refid);
+    }
+
+    BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+
+        public void onReceive(Context context, Intent intent) {
+
+            // get the refid from the download manager
+            long referenceId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            // remove it from our list
+            mDownloadsList.remove(referenceId);
+            // if list is empty means all downloads completed
+            if (mDownloadsList.isEmpty())
+            {
+                // show a notification
+                Log.e("INSIDE", "" + referenceId);
+                NotificationCompat.Builder mBuilder =
+                        new NotificationCompat.Builder(MainActivity.this)
+                                .setSmallIcon(R.mipmap.ic_launcher)
+                                .setContentTitle("Download manager")
+                                .setContentText("All Download completed");
+
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.notify(455, mBuilder.build());
+            }
+        }
+    };
 
     private void readImageFile(String fileUrl) {
         requestPermissionForFileRead();
+
+        Picasso.with(this)
+                .load(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                        ,mDownloadFileName))
+                .into(ivLoadedImage);
+
     }
 
 
